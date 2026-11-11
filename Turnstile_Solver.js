@@ -264,6 +264,11 @@ const HTML_UI = `<!DOCTYPE html>
                 <input type="text" id="sk" placeholder="0x4AAAAAAA..." required>
             </div>
 
+            <div class="field">
+                <label>Action (optional)</label>
+                <input type="text" id="act" placeholder="e.g. login-spin-v1">
+            </div>
+
             <button type="submit" class="go-btn" id="btn">
                 <span class="sp"></span>
                 <span class="lbl">run</span>
@@ -298,7 +303,7 @@ const HTML_UI = `<!DOCTYPE html>
         </div>
 
         <div class="ep">
-            <span>GET /solve?url=&lt;url&gt;&sitekey=&lt;key&gt;</span>
+            <span>GET /solve?url=&lt;url&gt;&sitekey=&lt;key&gt;&action=&lt;action&gt;</span>
         </div>
     </div>
 
@@ -314,7 +319,8 @@ const HTML_UI = `<!DOCTYPE html>
             out.classList.remove("show");
 
             try {
-                const r = await fetch("/solve?url=" + encodeURIComponent(document.getElementById("url").value) + "&sitekey=" + encodeURIComponent(document.getElementById("sk").value));
+                const act = document.getElementById("act").value.trim();
+                const r = await fetch("/solve?url=" + encodeURIComponent(document.getElementById("url").value) + "&sitekey=" + encodeURIComponent(document.getElementById("sk").value) + (act ? "&action=" + encodeURIComponent(act) : ""));
                 const d = await r.json();
                 out.classList.add("show");
 
@@ -369,7 +375,17 @@ const HTML_UI = `<!DOCTYPE html>
 </body>
 </html>`;
 
-function buildPage(siteKey) {
+function escAttr(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function buildPage(siteKey, action, cData) {
+    const actionAttr = action ? ` data-action="${escAttr(action)}"` : '';
+    const cDataAttr = cData ? ` data-cdata="${escAttr(cData)}"` : '';
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -388,7 +404,7 @@ function buildPage(siteKey) {
     </style>
 </head>
 <body>
-    <div class="cf-turnstile" data-sitekey="${siteKey}"></div>
+    <div class="cf-turnstile" data-sitekey="${escAttr(siteKey)}"${actionAttr}${cDataAttr}></div>
 </body>
 </html>`;
 }
@@ -442,7 +458,7 @@ function findPatchrightExe() {
     return null;
 }
 
-async function solve(siteUrl, siteKey, timeout = TIMEOUT) {
+async function solve(siteUrl, siteKey, timeout = TIMEOUT, action, cData) {
     let target = siteUrl.trim();
     if (!target.endsWith('/')) target += '/';
     const t0 = Date.now();
@@ -451,7 +467,7 @@ async function solve(siteUrl, siteKey, timeout = TIMEOUT) {
     let clicked = false;
 
     try {
-        const html = buildPage(siteKey);
+        const html = buildPage(siteKey, action, cData);
         await pg.route(target, r => r.fulfill({ body: html, status: 200, contentType: 'text/html' }));
         await pg.goto(target, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
@@ -513,11 +529,11 @@ const app = express();
 app.get('/', (req, res) => res.send(HTML_UI));
 
 app.get('/solve', async (req, res) => {
-    const { url, sitekey, timeout } = req.query;
+    const { url, sitekey, timeout, action, cdata } = req.query;
     if (!url) return res.status(400).json({ success: false, err: 'missing url' });
     if (!sitekey) return res.status(400).json({ success: false, err: 'missing sitekey' });
     try {
-        res.json(await solve(url, sitekey, timeout ? parseFloat(timeout) : TIMEOUT));
+        res.json(await solve(url, sitekey, timeout ? parseFloat(timeout) : TIMEOUT, action || undefined, cdata || undefined));
     } catch (e) {
         res.status(500).json({ success: false, err: e.message });
     }
