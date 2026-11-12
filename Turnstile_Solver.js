@@ -1,5 +1,5 @@
 const express = require('express');
-const { chromium } = require('@playwright/test');
+const { chromium } = require('rebrowser-playwright');
 const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -16,7 +16,7 @@ function getArg(flags, envVal, defaultVal) {
 
 const PORT = parseInt(getArg(['--port', '-P'], process.env.PORT, '6767'), 10);
 const POOL_SIZE = parseInt(getArg(['--pool', '-p'], process.env.POOL_SIZE, '5'), 10);
-const TIMEOUT = 30;
+const TIMEOUT = 60; // Increased timeout for headless mode
 const HEADLESS = getArg('--headless', process.env.HEADLESS, 'true') !== 'false';
 
 const HTML_UI = `<!DOCTYPE html>
@@ -414,7 +414,14 @@ const ctxPool = [];
 
 async function grabCtx() {
     if (ctxPool.length > 0) return ctxPool.shift();
-    return await browser.newContext({ viewport: { width: 1280, height: 720 } });
+    return await browser.newContext({
+        viewport: { width: 1280, height: 720 },
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        locale: 'en-US',
+        timezoneId: 'America/New_York',
+        permissions: ['geolocation'],
+        geolocation: { latitude: 40.7128, longitude: -74.0060 }
+    });
 }
 
 async function dropCtx(ctx) {
@@ -467,9 +474,16 @@ async function solve(siteUrl, siteKey, timeout = TIMEOUT, action, cData) {
     let clicked = false;
 
     try {
+        // Anti-detection headers
+        await pg.setExtraHTTPHeaders({
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        });
+
         const html = buildPage(siteKey, action, cData);
         await pg.route(target, r => r.fulfill({ body: html, status: 200, contentType: 'text/html' }));
-        await pg.goto(target, { waitUntil: 'domcontentloaded', timeout: 15000 });
+        await pg.goto(target, { waitUntil: 'commit', timeout: 15000 });
 
         while (Date.now() - t0 < timeout * 1000) {
             const [tok, ci] = await pg.evaluate(`[
@@ -484,7 +498,7 @@ async function solve(siteUrl, siteKey, timeout = TIMEOUT, action, cData) {
 
             if (ci && !clicked) {
                 clicked = true;
-                await new Promise(r => setTimeout(r, 400));
+                await new Promise(r => setTimeout(r, 200)); // Faster click
                 try {
                     const cfFrame = pg.frames().find(f => f.url().includes('challenges.cloudflare.com'));
                     let box = null;
@@ -501,18 +515,14 @@ async function solve(siteUrl, siteKey, timeout = TIMEOUT, action, cData) {
                     if (box) {
                         const clickX = box.x + 30;
                         const clickY = box.y + box.height / 2;
-                        await pg.mouse.move(clickX + 35, clickY + 12);
-                        await new Promise(r => setTimeout(r, 50));
                         await pg.mouse.move(clickX, clickY, { steps: 5 });
-                        await new Promise(r => setTimeout(r, 50));
-                        await pg.mouse.down();
-                        await new Promise(r => setTimeout(r, 60));
-                        await pg.mouse.up();
+                        await new Promise(r => setTimeout(r, 30));
+                        await pg.mouse.click(clickX, clickY); // Simpler click
                     }
                 } catch {}
             }
 
-            await new Promise(r => setTimeout(r, 150));
+            await new Promise(r => setTimeout(r, 100)); // Faster polling
         }
 
         return { success: false, err: 'timeout' };
@@ -560,13 +570,31 @@ async function main() {
             '--disable-dev-shm-usage',
             '--disable-gpu',
             '--disable-blink-features=AutomationControlled',
-            '--no-first-run'
+            '--no-first-run',
+            '--disable-software-rasterizer',
+            '--disable-extensions',
+            '--disable-background-networking',
+            '--disable-default-apps',
+            '--disable-sync',
+            '--disable-translate',
+            '--metrics-recording-only',
+            '--no-first-run',
+            '--safebrowsing-disable-auto-update',
+            '--disable-infobars',
+            '--window-size=1280,720'
         ]
     });
 
     console.log(`[INFO] Browser launched (headless: ${HEADLESS}). Initializing pool of ${POOL_SIZE} contexts...`);
     for (let i = 0; i < POOL_SIZE; i++) {
-        ctxPool.push(await browser.newContext({ viewport: { width: 1280, height: 720 } }));
+        ctxPool.push(await browser.newContext({
+            viewport: { width: 1280, height: 720 },
+            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            locale: 'en-US',
+            timezoneId: 'America/New_York',
+            permissions: ['geolocation'],
+            geolocation: { latitude: 40.7128, longitude: -74.0060 }
+        }));
     }
 
     app.listen(PORT, '0.0.0.0', () => {
