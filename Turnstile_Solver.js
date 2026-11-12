@@ -17,7 +17,7 @@ function getArg(flags, envVal, defaultVal) {
 const PORT = parseInt(getArg(['--port', '-P'], process.env.PORT, '6767'), 10);
 const POOL_SIZE = parseInt(getArg(['--pool', '-p'], process.env.POOL_SIZE, '5'), 10);
 const TIMEOUT = 30;
-const HEADLESS = getArg('--headless', process.env.HEADLESS, 'false') === 'true';
+const HEADLESS = getArg('--headless', process.env.HEADLESS, 'true') === 'false';
 
 const HTML_UI = `<!DOCTYPE html>
 <html lang="en">
