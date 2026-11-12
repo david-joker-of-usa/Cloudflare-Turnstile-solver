@@ -9,7 +9,7 @@ services:
       - "6767:6767"
     environment:
       NODE_ENV: production
-      HEADLESS: "true"
+      HEADLESS: "false"
       PORT: 6767
       POOL_SIZE: 1
     init: true
