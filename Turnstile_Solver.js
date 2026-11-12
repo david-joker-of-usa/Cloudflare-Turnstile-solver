@@ -542,6 +542,9 @@ app.get('/solve', async (req, res) => {
 app.get('/health', (req, res) => res.json({ ok: true, pool: ctxPool.length }));
 
 async function main() {
+    console.log(`[INFO] Starting Turnstile Solver...`);
+    console.log(`[INFO] Config: PORT=${PORT}, POOL_SIZE=${POOL_SIZE}, HEADLESS=${HEADLESS}`);
+
     const exePath = findPatchrightExe();
     if (exePath) {
         console.log(`[INFO] Using Chromium binary: ${exePath}`);
@@ -568,7 +571,8 @@ async function main() {
 
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`[INFO] Server running at http://0.0.0.0:${PORT}`);
-        console.log(`       GET http://localhost:${PORT}/solve?url=<site>&sitekey=<key>`);
+        console.log(`[INFO] GET http://localhost:${PORT}/solve?url=<site>&sitekey=<key>`);
+        console.log(`[INFO] Health check: http://localhost:${PORT}/health`);
     });
 }
 
