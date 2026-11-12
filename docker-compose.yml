@@ -11,6 +11,6 @@ services:
       NODE_ENV: production
       HEADLESS: "true"
       PORT: 6767
-      POOL_SIZE: 5
+      POOL_SIZE: 1
     init: true
     shm_size: 1gb
