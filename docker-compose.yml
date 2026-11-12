@@ -1,0 +1,15 @@
+
+services:
+  turnstile:
+    build: .
+    container_name: turnstile-solver
+    restart: unless-stopped
+    ports:
+      - "6767:6767"
+    environment:
+      NODE_ENV: production
+      HEADLESS: "true"
+      PORT: 6767
+      POOL_SIZE: 5
+    init: true
+    shm_size: 1gb
