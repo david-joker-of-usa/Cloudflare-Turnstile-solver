@@ -3,6 +3,9 @@ FROM mcr.microsoft.com/playwright:v1.65.0-jammy
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --omit=dev
+# npm package-এর সাথে matching Chromium revision install করো
+# (base image-এর browser version আলাদা হতে পারে)
+RUN npx playwright install chromium
 COPY . .
 
 # Xvfb install
