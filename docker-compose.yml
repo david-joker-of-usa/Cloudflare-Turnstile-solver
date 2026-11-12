@@ -1,7 +1,8 @@
-
 services:
   turnstile:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: turnstile-solver
     restart: unless-stopped
     ports:
