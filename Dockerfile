@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y xvfb && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production
 ENV HEADLESS=true
 ENV PORT=6767
+ENV TIMEOUT=60
 
 EXPOSE 6767
 
