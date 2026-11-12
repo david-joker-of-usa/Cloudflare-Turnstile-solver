@@ -11,9 +11,9 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 6767,
-        HEADLESS: 'false',
+        HEADLESS: 'true',
         // Configure the browser context pool size here (e.g. 5, 10, 20):
-        POOL_SIZE: 5
+        POOL_SIZE: 1
       }
     }
   ]
